@@ -107,12 +107,12 @@ struct RelayConfig {
 //   Bare transistor-driven modules:     active_high = true  (active-HIGH)
 
 const RelayConfig RELAY_CONFIGS[NUM_RELAYS] = {
-    // { "Name",              GPIO,  active_high }
-    { "Living Room Light",    16,    true },
-    { "Bedroom Light",        17,    true },
-    { "Desk Setup",           18,    true },
-    { "Fan",                  19,    true },
-    { "Spare Appliance",      23,    true },
+    // { "Name",              GPIO,  active_high }  // Board Silkscreen Label (Right Side)
+    { "Living Room Light",    16,    true },        // Pin "RX2" (GPIO16)
+    { "Bedroom Light",        17,    true },        // Pin "TX2" (GPIO17)
+    { "Desk Setup",           18,    true },        // Pin "D18" (GPIO18)
+    { "Fan",                  19,    true },        // Pin "D19" (GPIO19)
+    { "Spare Appliance",      23,    true },        // Pin "D23" (GPIO23)
 };
 
 // =============================================================================
@@ -149,12 +149,12 @@ struct SwitchConfig {
 #define SWITCH_DEBOUNCE_MS  50   // Debounce window in milliseconds
 
 const SwitchConfig SWITCH_CONFIGS[NUM_RELAYS] = {
-    // { GPIO, type,                 enabled }
-    { 25,    SWITCH_TYPE_TOGGLE,    true },  // SW1 → Relay 1 (Living Room Light)
-    { 26,    SWITCH_TYPE_TOGGLE,    true },  // SW2 → Relay 2 (Bedroom Light)
-    { 27,    SWITCH_TYPE_TOGGLE,    true },  // SW3 → Relay 3 (Desk Setup)
-    { 32,    SWITCH_TYPE_TOGGLE,    true },  // SW4 → Relay 4 (Fan)
-    { 33,    SWITCH_TYPE_TOGGLE,    true },  // SW5 → Relay 5 (Spare Appliance)
+    // { GPIO, type,                 enabled }  // Board Silkscreen Label (Left Side)
+    { 25,    SWITCH_TYPE_TOGGLE,    true },     // Pin "D25" (GPIO25) → SW1 (Living Room Light)
+    { 26,    SWITCH_TYPE_TOGGLE,    true },     // Pin "D26" (GPIO26) → SW2 (Bedroom Light)
+    { 27,    SWITCH_TYPE_TOGGLE,    true },     // Pin "D27" (GPIO27) → SW3 (Desk Setup)
+    { 32,    SWITCH_TYPE_TOGGLE,    true },     // Pin "D32" (GPIO32) → SW4 (Fan)
+    { 33,    SWITCH_TYPE_TOGGLE,    true },     // Pin "D33" (GPIO33) → SW5 (Spare Appliance)
 };
 
 // =============================================================================

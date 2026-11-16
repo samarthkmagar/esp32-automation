@@ -55,6 +55,7 @@ private:
     bool checkRateLimit();
 
     // --- Route Handlers ---
+    void handleRoot();
     void handleHealth();
     void handleStatus();
     void handleRelayStatus();

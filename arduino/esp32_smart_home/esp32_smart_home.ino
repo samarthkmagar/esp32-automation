@@ -16,6 +16,8 @@
 // =============================================================================
 
 #include <Arduino.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include "config.h"
 #include "relay_controller.h"
 #include "switch_controller.h"
@@ -42,6 +44,12 @@ void pollSwitches() {
 // Setup
 // =============================================================================
 void setup() {
+#if DISABLE_BROWNOUT_DETECTOR
+    // Disable hardware brownout detector immediately on boot so brief USB voltage
+    // drops when Wi-Fi radio powers up do not trigger an MCU reset.
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+#endif
+
     bootTime = millis();
 
     // 1. Serial — for debugging and provisioning

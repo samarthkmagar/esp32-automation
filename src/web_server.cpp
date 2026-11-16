@@ -24,6 +24,7 @@ void SmartHomeServer::begin(RelayController* relays, WolBridge* wol, unsigned lo
     server_.collectHeaders(headerKeys, 2);
 
     // --- Register Routes ---
+    server_.on("/",                  HTTP_GET,  [this]() { handleRoot(); });
     server_.on("/api/health",        HTTP_GET,  [this]() { handleHealth(); });
     server_.on("/api/status",        HTTP_GET,  [this]() { handleStatus(); });
     server_.on("/api/relay/status",  HTTP_GET,  [this]() { handleRelayStatus(); });
@@ -89,6 +90,142 @@ bool SmartHomeServer::checkRateLimit() {
 // =============================================================================
 // Route Handlers
 // =============================================================================
+
+void SmartHomeServer::handleRoot() {
+    // Built-in Web Dashboard for immediate browser/phone control without Home Assistant
+    String html = R"rawliteral(<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32 Smart Home</title>
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --primary: #10b981; --off: #334155; --text: #f8fafc; --dim: #94a3b8; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  .container { width: 100%; max-width: 520px; }
+  header { text-align: center; margin-bottom: 20px; }
+  h1 { font-size: 1.6rem; color: #fff; margin-bottom: 6px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #10b98122; color: var(--primary); font-size: 0.82rem; font-weight: 600; border: 1px solid #10b98144; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 22px; }
+  .card { background: var(--card); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+  .card-info h3 { font-size: 1.05rem; margin-bottom: 4px; }
+  .card-info p { font-size: 0.78rem; color: var(--dim); }
+  .btn-toggle { padding: 10px 22px; border-radius: 8px; border: none; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: 0.15s; min-width: 80px; }
+  .btn-on { background: var(--primary); color: #000; box-shadow: 0 0 12px rgba(16,185,129,0.4); }
+  .btn-off { background: var(--off); color: var(--dim); }
+  .btn-toggle:active { transform: scale(0.96); }
+  .section-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 20px 0 10px 0; }
+  .wol-card { background: var(--card); border-radius: 12px; padding: 16px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+  .btn-wake { background: #3b82f6; color: #fff; padding: 10px 18px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.15s; }
+  .btn-wake:active { transform: scale(0.96); }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; border: 1px solid #475569; padding: 10px 20px; border-radius: 8px; font-size: 0.88rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>ESP32 Smart Home</h1>
+    <span class="badge" id="wifi-badge">Online • 192.168.1.4</span>
+  </header>
+  <div class="grid" id="relay-list">
+    <!-- Relays injected via JS -->
+  </div>
+  <div class="section-title">Wake-on-LAN</div>
+  <div class="wol-card">
+    <div>
+      <h3 style="font-size:1.05rem; margin-bottom:4px;">Lenovo ThinkPad P53</h3>
+      <p style="font-size:0.78rem; color:var(--dim);">Target: thinkpad_p53</p>
+    </div>
+    <button class="btn-wake" onclick="wakeTarget('thinkpad_p53')">Wake PC</button>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const TOKEN = ")rawliteral";
+    html += API_AUTH_TOKEN;
+    html += R"rawliteral(";
+const PIN_NAMES = {
+  1: "Relay: RX2 (GPIO16) | Switch: D25",
+  2: "Relay: TX2 (GPIO17) | Switch: D26",
+  3: "Relay: D18 (GPIO18) | Switch: D27",
+  4: "Relay: D19 (GPIO19) | Switch: D32",
+  5: "Relay: D23 (GPIO23) | Switch: D33"
+};
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.opacity = "1";
+  setTimeout(() => { t.style.opacity = "0"; }, 2500);
+}
+
+async function loadStatus() {
+  try {
+    const res = await fetch('/api/relay/status', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (!res.ok) return;
+    const data = await res.json();
+    const container = document.getElementById("relay-list");
+    container.innerHTML = "";
+    data.relays.forEach(r => {
+      const isOn = r.state === "on";
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <div class="card-info">
+          <h3>${r.name}</h3>
+          <p>CH${r.channel} • ${PIN_NAMES[r.channel] || 'GPIO' + r.gpio}</p>
+        </div>
+        <button class="btn-toggle ${isOn ? 'btn-on' : 'btn-off'}" onclick="toggleRelay(${r.channel})">
+          ${isOn ? 'ON' : 'OFF'}
+        </button>
+      `;
+      container.appendChild(div);
+    });
+  } catch(e) {}
+}
+
+async function toggleRelay(ch) {
+  try {
+    const res = await fetch('/api/relay/control', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: ch, action: "toggle" })
+    });
+    const d = await res.json();
+    if (d.success) {
+      loadStatus();
+      showToast(`${d.name} turned ${d.state.toUpperCase()}`);
+    }
+  } catch(e) {
+    showToast("Command failed");
+  }
+}
+
+async function wakeTarget(target) {
+  try {
+    showToast("Sending WoL magic packet...");
+    const res = await fetch('/api/wol/wake', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: target })
+    });
+    const d = await res.json();
+    if (d.success) showToast("WoL packet sent (" + d.packets_sent + " packets)");
+    else showToast("WoL failed: " + (d.error || "Unknown"));
+  } catch(e) {
+    showToast("Failed to send WoL");
+  }
+}
+
+loadStatus();
+setInterval(loadStatus, 2000);
+</script>
+</body>
+</html>)rawliteral";
+
+    server_.send(200, "text/html", html);
+}
 
 void SmartHomeServer::handleHealth() {
     // Health check — no authentication required.

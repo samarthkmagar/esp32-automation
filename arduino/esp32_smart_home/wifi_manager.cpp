@@ -12,8 +12,15 @@ void WiFiManager::begin(void (*tickCallback)()) {
     pinMode(STATUS_LED_PIN, OUTPUT);
     digitalWrite(STATUS_LED_PIN, STATUS_LED_ACTIVE_HIGH ? LOW : HIGH);  // LED off
 
+    // Allow power rail to stabilize before turning on RF radio
+    delay(100);
+
     // Configure Wi-Fi as station (client) mode
     WiFi.mode(WIFI_STA);
+
+    // Lower Tx power slightly to reduce peak RF power amplifier surge
+    WiFi.setTxPower(WIFI_TX_POWER);
+
     WiFi.setHostname(DEVICE_HOSTNAME);
     WiFi.setAutoReconnect(true);  // ESP32 IDF auto-reconnect
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);

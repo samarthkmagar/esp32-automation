@@ -15,6 +15,8 @@
 // =============================================================================
 
 #include <Arduino.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include "config.h"
 #include "relay_controller.h"
 #include "switch_controller.h"
@@ -41,6 +43,10 @@ void pollSwitches() {
 // Setup
 // =============================================================================
 void setup() {
+#if DISABLE_BROWNOUT_DETECTOR
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+#endif
+
     bootTime = millis();
 
     // 1. Serial — for debugging and provisioning
